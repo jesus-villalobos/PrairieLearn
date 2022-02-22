@@ -19,6 +19,9 @@ const cache = require('../lib/cache');
 const localCache = require('../lib/local-cache');
 const workers = require('../lib/workers');
 const tracing = require('../lib/tracing');
+const externalGrader = require('../lib/externalGrader');
+const externalGradingSocket = require('../lib/externalGradingSocket');
+
 const sqldb = require('../prairielib/lib/sql-db');
 const sqlLoader = require('../prairielib/lib/sql-loader');
 const sql = sqlLoader.loadSqlEquiv(__filename);
@@ -34,12 +37,13 @@ const courseDirDefault = path.join(__dirname, '..', 'testCourse');
 
 module.exports = {
   before: (courseDir) => {
-    if (typeof courseDir == 'undefined') {
+    if (typeof courseDir === 'undefined') {
       courseDir = courseDirDefault;
     }
     return function (callback) {
       debug('before()');
       var that = this;
+      let httpServer;
       async.series(
         [
           async () => {
@@ -49,13 +53,10 @@ module.exports = {
           async () => {
             await aws.init();
           },
-          function (callback) {
+          async () => {
             debug('before(): initializing DB');
             // pass "this" explicitly to enable this.timeout() calls
-            helperDb.before.call(that, function (err) {
-              if (ERR(err, callback)) return;
-              callback(null);
-            });
+            await helperDb.before.call(that);
           },
           util.callbackify(async () => {
             debug('before(): create tmp dir for config.filesRoot');
@@ -103,16 +104,13 @@ module.exports = {
             workers.init();
             callback(null);
           },
-          function (callback) {
+          async () => {
             debug('before(): start server');
-            server.startServer(function (err) {
-              if (ERR(err, callback)) return;
-              callback(null);
-            });
+            httpServer = await server.startServer();
           },
           function (callback) {
             debug('before(): initialize socket server');
-            socketServer.init(server, function (err) {
+            socketServer.init(httpServer, function (err) {
               if (ERR(err, callback)) return;
               callback(null);
             });
@@ -134,6 +132,18 @@ module.exports = {
           function (callback) {
             debug('before(): initialize freeform server');
             freeformServer.init(function (err) {
+              if (ERR(err, callback)) return;
+              callback(null);
+            });
+          },
+          function (callback) {
+            externalGrader.init(function (err) {
+              if (ERR(err, callback)) return;
+              callback(null);
+            });
+          },
+          function (callback) {
+            externalGradingSocket.init(function (err) {
               if (ERR(err, callback)) return;
               callback(null);
             });
@@ -207,12 +217,9 @@ module.exports = {
           localCache.close();
           callback(null);
         },
-        function (callback) {
+        async () => {
           debug('after(): finish DB');
-          helperDb.after.call(that, function (err) {
-            if (ERR(err, callback)) return;
-            callback(null);
-          });
+          await helperDb.after.call(that);
         },
       ],
       function (err) {
@@ -226,7 +233,7 @@ module.exports = {
 
 module.exports.getLastJobSequenceIdAsync = async () => {
   const result = await sqldb.queryZeroOrOneRowAsync(sql.select_last_job_sequence, []);
-  if (result.rowCount == 0) {
+  if (result.rowCount === 0) {
     throw new Error('Could not find last job_sequence_id: did the job start?');
   }
   const job_sequence_id = result.rows[0].id;
@@ -242,7 +249,7 @@ module.exports.waitForJobSequenceAsync = async (job_sequence_id) => {
       job_sequence_id,
     });
     job_sequence = result.rows[0];
-    if (job_sequence.status != 'Running') break;
+    if (job_sequence.status !== 'Running') break;
     await delay(10);
   }
   return job_sequence;

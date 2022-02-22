@@ -290,6 +290,7 @@ const FILE_UUID_REGEX =
  * @property {QuestionAlternative[]} [alternatives]
  * @property {number} numberChoose
  * @property {number} triesPerVariant
+ * @property {number} advanceScorePerc
  * @property {number} gradeRateMinutes
  */
 
@@ -300,6 +301,7 @@ const FILE_UUID_REGEX =
  * @property {number} numberChoose
  * @property {number} bestQuestions
  * @property {ZoneQuestion[]} questions
+ * @property {number} advanceScorePerc
  * @property {number} gradeRateMinutes
  */
 
@@ -327,6 +329,7 @@ const FILE_UUID_REGEX =
  * @property {boolean} studentGroupCreate
  * @property {boolean} studentGroupJoin
  * @property {boolean} studentGroupLeave
+ * @property {number} advanceScorePerc
  * @property {number} gradeRateMinutes
  */
 
@@ -584,7 +587,7 @@ module.exports.courseDataHasErrorsOrWarnings = function (courseData) {
  * Loads a JSON file at the path `path.join(coursePath, filePath). The
  * path is passed as two separate paths so that we can avoid leaking the
  * absolute path on disk to users.
- * @template T
+ * @template {{ uuid: string }} T
  * @param {Object} options - Options for loading and validating the file
  * @param {string} options.coursePath
  * @param {string} options.filePath
@@ -656,11 +659,12 @@ module.exports.loadInfoFile = async function ({
     }
 
     // Validate file against schema
+    /** @type {import('ajv').ValidateFunction<T>} */
     const validate = ajv.compile(schema);
     try {
       const valid = validate(json);
       if (!valid) {
-        const result = { uuid: json.uuid };
+        const result = { uuid: /** @type {any} */ (json).uuid };
         const errorText = betterAjvErrors(schema, json, validate.errors, {
           indent: 2,
         });
@@ -829,7 +833,7 @@ module.exports.loadCourseInfo = async function (coursePath) {
 };
 
 /**
- * @template T
+ * @template {{ uuid: string }} T
  * @param {Object} options - Options for loading and validating the file
  * @param {string} options.coursePath
  * @param {string} options.filePath
@@ -848,12 +852,14 @@ async function loadAndValidateJson({
   tolerateMissing,
 }) {
   // perf.start(`loadandvalidate:${filePath}`);
-  const loadedJson = await module.exports.loadInfoFile({
-    coursePath,
-    filePath,
-    schema,
-    tolerateMissing,
-  });
+  const loadedJson = /** @type {InfoFile<T>} */ (
+    await module.exports.loadInfoFile({
+      coursePath,
+      filePath,
+      schema,
+      tolerateMissing,
+    })
+  );
   // perf.end(`loadandvalidate:${filePath}`);
   if (loadedJson === null) {
     // This should only occur if we looked for a file in a non-directory,
@@ -878,7 +884,7 @@ async function loadAndValidateJson({
 
 /**
  * Loads and schema-validates all info files in a directory.
- * @template T
+ * @template {{ uuid: string }} T
  * @param {Object} options - Options for loading and validating files
  * @param {string} options.coursePath The path of the course being synced
  * @param {string} options.directory The path of the directory relative to `coursePath`
@@ -911,22 +917,24 @@ async function loadInfoForDirectory({
     // hooray, we're done.
     await async.each(files, async (/** @type {string} */ dir) => {
       const infoFilePath = path.join(directory, relativeDir, dir, infoFilename);
-      const info = await loadAndValidateJson({
-        coursePath,
-        filePath: infoFilePath,
-        defaults: defaultInfo,
-        schema,
-        validate,
-        // If we aren't operating in recursive mode, we want to ensure
-        // that missing files are correctly reflected as errors.
-        tolerateMissing: recursive,
-      });
+      const info = /** @type {InfoFile<T>} */ (
+        await loadAndValidateJson({
+          coursePath,
+          filePath: infoFilePath,
+          defaults: defaultInfo,
+          schema,
+          validate,
+          // If we aren't operating in recursive mode, we want to ensure
+          // that missing files are correctly reflected as errors.
+          tolerateMissing: recursive,
+        })
+      );
       if (info) {
         infoFiles[path.join(relativeDir, dir)] = info;
       } else if (recursive) {
         try {
           const subInfoFiles = await walk(path.join(relativeDir, dir));
-          if (_.size(subInfoFiles) == 0) {
+          if (_.isEmpty(subInfoFiles)) {
             infoFiles[path.join(relativeDir, dir)] = infofile.makeError(
               `Missing JSON file: ${infoFilePath}`
             );
@@ -1006,7 +1014,7 @@ function checkDuplicateUUIDs(infos, makeErrorMessage) {
 function checkAllowAccessRoles(rule) {
   const warnings = [];
   if ('role' in rule) {
-    if (rule.role != 'Student') {
+    if (rule.role !== 'Student') {
       warnings.push(
         `The entire "allowAccess" rule with "role: ${rule.role}" should be deleted. Instead, course owners can now manage course staff access on the "Staff" page.`
       );
@@ -1174,15 +1182,15 @@ async function validateAssessment(assessment, questions) {
 
       alternatives.forEach((alternative) => {
         if (assessment.type === 'Exam') {
-          if (alternative.maxPoints != undefined) {
+          if (alternative.maxPoints !== undefined) {
             errors.push('Cannot specify "maxPoints" for a question in an "Exam" assessment');
           }
-          if (alternative.points == undefined) {
+          if (alternative.points === undefined) {
             errors.push('Must specify "points" for a question in an "Exam" assessment');
           }
         }
         if (assessment.type === 'Homework') {
-          if (alternative.points == undefined) {
+          if (alternative.points === undefined) {
             errors.push('Must specify "points" for a question in a "Homework" assessment');
           }
           if (Array.isArray(alternative.points)) {
