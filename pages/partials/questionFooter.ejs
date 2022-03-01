@@ -42,7 +42,17 @@
           <input type="hidden" name="__variant_id" value="<%= variant.id %>">
           <input type="hidden" name="__csrf_token" value="<%= __csrf_token %>">
           <% if (showNewVariantButton) { %>
-            <a href="<%= nextVariantUrl %>" class="btn btn-primary disable-on-click ml-1">Next variant</a>
+            <button class="btn btn-info disable-on-submit" name="__action" onclick="console.log('this is for next variant');">
+              Next variant
+              <ul class="pagination pagination-sm">
+                <li class="page-item">
+                  <input type="number" min="0" max="<%= maxVariant %>" class="form-control input-sm" maxlength="5" id="variant-input"> <!-- aria-describedby="basic-addon3" -->
+                </li>
+              </ul>
+            </button>
+            <a href="<%= nextVariantUrl %>" class="btn btn-primary disable-on-click ml-1">
+              This is the new link
+            </a>
             <a href="<%= newVariantUrl %>" class="btn btn-primary disable-on-click ml-1">New variant</a>
           <% } else if (showTryAgainButton) { %><a href="<%= tryAgainUrl %>" class="btn btn-primary disable-on-click ml-1">Try a new variant</a>
           <% } else if (hasAttemptsOtherVariants) { %>
