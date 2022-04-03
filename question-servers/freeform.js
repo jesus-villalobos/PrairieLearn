@@ -22,6 +22,38 @@ const markdown = require('../lib/markdown');
 const chunks = require('../lib/chunks');
 const assets = require('../lib/assets');
 
+class Middleware {
+  constructor() {
+      this.variantNum = 0;
+      this.totalVariantNum = helperTemp();
+  }
+
+  nextVariant() {
+      return ++this.variantNum % this.totalVariantNum;
+  }
+
+  prevVariant() {
+      --this.variantNum;
+      if (this.variantNum < 0) {
+          this.variantNum = this.totalVariantNum - 1;
+      }
+      return this.variantNum;
+  }
+
+  selectVariant(num) {
+      this.variantNum = num % this.totalVariantNum;
+      return this.variantNum;
+  }
+}
+
+function helperTemp() {
+  var max = 100;
+  var min = 1;
+  return 10;
+} 
+
+const m = new Middleware();
+
 // Maps core element names to element info
 let coreElementsCache = {};
 // Maps course IDs to course element info
@@ -530,6 +562,9 @@ module.exports = {
     err = checkProp('variant_seed',          'integer', allPhases,                            []);
     if (err) return err;
     // prettier-ignore
+    err = checkProp('variant_number',          'integer', ['generate'],                           ['generate']);
+    if (err) return err;
+    // prettier-ignore
     err = checkProp('options',               'object',  allPhases,                            []);
     if (err) return err;
     // prettier-ignore
@@ -1023,6 +1058,8 @@ module.exports = {
   },
 
   generate: function (question, course, variant_seed, callback) {
+    console.log("im in the generate function :')");
+    var vnumber = m.nextVariant();
     debug('generate()');
     module.exports.getContext(question, course, (err, context) => {
       if (err) {
@@ -1033,6 +1070,8 @@ module.exports = {
         correct_answers: {},
         variant_seed: parseInt(variant_seed, 36),
         options: _.defaults({}, course.options, question.options),
+        variant_number: vnumber,
+        //test: 2,
       };
       _.extend(data.options, module.exports.getContextOptions(context));
       workers.getPythonCaller((err, pc) => {
@@ -1050,6 +1089,7 @@ module.exports = {
               const ret_vals = {
                 params: data.params,
                 true_answer: data.correct_answers,
+                variant_number: vnumber,
               };
               debug(`generate(): completed`);
               callback(null, courseIssues, ret_vals);
@@ -1073,6 +1113,7 @@ module.exports = {
         correct_answers: _.get(variant, 'true_answer', {}),
         variant_seed: parseInt(variant.variant_seed, 36),
         options: _.get(variant, 'options', {}),
+        //variant_number: 0,
       };
       _.extend(data.options, module.exports.getContextOptions(context));
       workers.getPythonCaller((err, pc) => {
