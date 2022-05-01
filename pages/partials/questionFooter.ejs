@@ -57,11 +57,12 @@
           <input type="hidden" name="__variant_id" value="<%= variant.id %>">
           <input type="hidden" name="__csrf_token" value="<%= __csrf_token %>">
           <% if (showNewVariantButton) { %>
-            <div><a href="<%= newVariantUrl %>" class="btn btn-primary disable-on-click ml-1">New variant</a></div>
+            <div><a href="<%= newVariantUrl %>" class="btn btn-primary disable-on-click ml-1">Next variant</a></div>
+            <div><a href="<%= prevVariantUrl %>" class="btn btn-primary disable-on-click ml-1">Prev variant</a></div>
             <div class="btn-group" role="group">
               <a id="nextVariantNav" class="btn btn-primary ml-1" 
                 onclick="
-                  console.log(document.getElementById('variant-input').value);
+                  console.log(document.getElementById('variant-input').value); console.log('this is working');
                   if (document.getElementById('variant-input').value > 0 && document.getElementById('variant-input').value <= parseInt('<%= maxVariant %>')) {
                     console.log('<%= nextVariantUrl %>' + document.getElementById('variant-input').value); 
                     document.getElementById('nextVariantNav').href = '<%= nextVariantUrl %>' + document.getElementById('variant-input').value;

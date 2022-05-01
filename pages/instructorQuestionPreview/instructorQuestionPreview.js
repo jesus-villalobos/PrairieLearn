@@ -11,6 +11,7 @@ const debug = require('debug')('prairielearn:' + path.basename(__filename, '.js'
 const logPageView = require('../../middlewares/logPageView')(path.basename(__filename, '.js'));
 
 function processSubmission(req, res, callback) {
+  var a = 1/0;
   let variant_id, submitted_answer;
   if (res.locals.question.type === 'Freeform') {
     variant_id = req.body.__variant_id;
@@ -146,12 +147,14 @@ router.post('/', function (req, res, next) {
 });
 
 router.get('/', function (req, res, next) {
+  console.log(req);
   var variant_seed = req.query.variant_seed ? req.query.variant_seed : null;
   debug(`variant_seed ${variant_seed}`);
   async.series(
     [
       (callback) => {
         // req.query.variant_id might be undefined, which will generate a new variant
+        console.log("hello");
         question.getAndRenderVariant(
           req.query.variant_id,
           variant_seed,
