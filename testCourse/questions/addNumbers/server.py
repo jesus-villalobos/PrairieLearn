@@ -10,6 +10,7 @@ def generate_values(variant_id, keeps):
         keeps: a list of constrains for each parameter.
     Output:
         return a list that contains the value of each parameter.
+        also returns a number for total number of variants
     """
     result = []
     ranges = [len(k) for k in keeps]
@@ -17,11 +18,13 @@ def generate_values(variant_id, keeps):
         ranges_product = reduce((lambda x, y: x * y), ranges[i+1:])
         result.append(keeps[i][(variant_id//ranges_product)%len(keeps[i])])
     result.append(keeps[-1][variant_id%ranges[-1]])
-    return result
+    n_variant = reduce((lambda x, y: x * y), [len(k) for k in keeps])
+    return result, n_variant
 
 #After using our library
 def generate(data):
-    a, b = generate_values(data['variant_number'],[range(3,5), range(10,12)])
+    a, b, numOfVariants = generate_values(data['variant_number'],[range(3,5), range(10,12)])
+    data['total_num_variants'] = numOfVariants
     # Put these two integers into data['params']
     data['params']['a'] = a
     data['params']['b'] = b
