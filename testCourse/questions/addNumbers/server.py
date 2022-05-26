@@ -23,12 +23,12 @@ def generate_values(variant_id, keeps):
 
 #After using our library
 def generate(data):
-    a, b, numOfVariants = generate_values(data['variant_number'],[range(3,5), range(10,12)])
+    paramValues, numOfVariants = generate_values(data['variant_number'],[range(3,5), range(10,12)])
     data['total_num_variants'] = numOfVariants
     # Put these two integers into data['params']
-    data['params']['a'] = a
-    data['params']['b'] = b
+    data['params']['a'] = paramValues[0]
+    data['params']['b'] = paramValues[1]
     # Compute the sum of these two integers
-    c = a + b
+    c = paramValues[0] + paramValues[1]
     # Put the sum into data['correct_answers']
     data['correct_answers']['c'] = c

@@ -147,7 +147,6 @@ router.post('/', function (req, res, next) {
 });
 
 router.get('/', function (req, res, next) {
-  console.log(req);
   var variant_seed = req.query.variant_seed ? req.query.variant_seed : null;
   debug(`variant_seed ${variant_seed}`);
   async.series(

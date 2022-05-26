@@ -500,6 +500,7 @@ module.exports = {
                     return 'data.' + prop + ' is not an object: ' + String(data[prop]);
                 }
             } else {
+                console.log(prop);
                 return 'invalid type: ' + String(type);
             }
             if (!editPhases.includes(phase)) {
@@ -535,6 +536,9 @@ module.exports = {
         if (err) return err;
         // prettier-ignore
         err = checkProp('variant_number', 'integer', ['generate'], ['generate']);
+        if (err) return err;
+        // prettier-ignore
+        err = checkProp('total_num_variants', 'integer', ['generate'], ['generate']);
         if (err) return err;
         // prettier-ignore
         err = checkProp('options', 'object', allPhases, []);
@@ -1048,7 +1052,7 @@ module.exports = {
                 variant_seed: parseInt(variant_seed, 36),
                 options: _.defaults({}, course.options, question.options),
                 variant_number: vnumber,
-                total_num_variants: null,
+                total_num_variants: -1,
                 //test: 2,
             };
             _.extend(data.options, module.exports.getContextOptions(context));
@@ -1070,6 +1074,8 @@ module.exports = {
                                 variant_number: vnumber,
                                 total_num_variants: data.total_num_variants,
                             };
+                            middleware.setTotalVariants(data.total_num_variants);
+                            console.log(data);
                             debug(`generate(): completed`);
                             callback(null, courseIssues, ret_vals);
                         });
@@ -1092,8 +1098,6 @@ module.exports = {
                 correct_answers: _.get(variant, 'true_answer', {}),
                 variant_seed: parseInt(variant.variant_seed, 36),
                 options: _.get(variant, 'options', {}),
-                variant_number: vnumber,
-                total_num_variants: null,
             };
             _.extend(data.options, module.exports.getContextOptions(context));
             workers.getPythonCaller((err, pc) => {
@@ -1111,8 +1115,6 @@ module.exports = {
                             const ret_vals = {
                                 params: data.params,
                                 true_answer: data.correct_answers,
-                                variant_number: vnumber,
-                                total_num_variants: data.total_num_variants,
                             };
                             debug(`prepare(): completed`);
                             callback(null, courseIssues, ret_vals);
@@ -1833,7 +1835,7 @@ module.exports = {
                 // error message of `[object Object]` which is useless.
                 //
                 // tl;dr: don't cache any results that would create course issues.
-                const hasCourseIssues = cachedData ? .courseIssues ? .length > 0;
+                const hasCourseIssues = cachedData ?.courseIssues ?.length > 0;
                 if (cacheKey && !hasCourseIssues) {
                     cache.set(cacheKey, cachedData);
                 }
@@ -1863,7 +1865,7 @@ module.exports = {
                 // TODO: once this has been deployed in production for a while,
                 // we can safely remove this check, as we can guarantee that the
                 // cache will no longer contain any entries with `courseIssues`.
-                const hasCachedCourseIssues = cachedData ? .courseIssues ? .length > 0;
+                const hasCachedCourseIssues = cachedData ?.courseIssues ?.length > 0;
                 if (hasCachedData && !hasCachedCourseIssues) {
                     const cacheHit = true;
                     processFcn(cachedData, cacheHit);
